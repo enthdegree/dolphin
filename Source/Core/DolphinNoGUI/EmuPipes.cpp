@@ -26,7 +26,7 @@
 #include "Common/FileUtil.h"
 #include "Common/StringUtil.h"
 
-#define FIFO_DELAY_US 2000
+#define FIFO_DELAY_US 500
 
 namespace EmuPipes
 {
@@ -104,8 +104,9 @@ void EmuPipes::ReadPipe(void) {
 }
 
 void EmuPipes::ParseCommand(std::string& cmd) {
+    write(fd_emu_out, (cmd+" ").c_str(), cmd.length()+1); // ACK
     std::vector<std::string> tokens = SplitString(cmd, ' ');
-
+    
     if(tokens.size() == 0) { 
         HandleParseFailed(); 
         return; 
