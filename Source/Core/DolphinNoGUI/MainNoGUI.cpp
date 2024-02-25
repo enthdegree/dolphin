@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "DolphinNoGUI/Platform.h"
+#include "EmuPipes.h"
 
 #include <OptionParser.h>
 #include <cstddef>
@@ -312,6 +313,10 @@ int main(int argc, char* argv[])
 
 #ifdef USE_DISCORD_PRESENCE
   Discord::UpdateDiscordPresence();
+#endif
+
+#ifdef USE_EMU_PIPES
+  EmuPipes::EmuPipes theEmuPipes = EmuPipes::EmuPipes();
 #endif
 
   s_platform->MainLoop();

@@ -5,6 +5,12 @@ add_executable(dolphin-nogui
   MainNoGUI.cpp
 )
 
+if(USE_EMU_PIPES)
+  add_library(emupipes 
+  EmuPipes.cpp
+  EmuPipes.h)
+endif()
+
 if(ENABLE_X11 AND X11_FOUND)
   target_sources(dolphin-nogui PRIVATE PlatformX11.cpp)
 endif()
@@ -29,6 +35,7 @@ PRIVATE
   core
   uicommon
   cpp-optparse
+  emupipes
 )
 
 if(APPLE)

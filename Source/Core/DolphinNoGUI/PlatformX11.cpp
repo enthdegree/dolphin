@@ -10,6 +10,7 @@
 static constexpr auto X_None = None;
 
 #include "DolphinNoGUI/Platform.h"
+#include "EmuPipes.h"
 
 #include "Common/MsgHandler.h"
 #include "Core/Config/MainSettings.h"
@@ -151,6 +152,11 @@ void PlatformX11::MainLoop()
   while (IsRunning())
   {
     UpdateRunningFlag();
+
+#ifdef USE_EMU_PIPES
+    EmuPipes::EmuPipes::ReadPipe();
+#endif
+
     Core::HostDispatchJobs();
     ProcessEvents();
     UpdateWindowPosition();
