@@ -95,11 +95,6 @@ void EmuPipes::ReadPipe(void) {
         std::string cmd = cmdbuf.substr(0, newline);
         ParseCommand(cmd);
         
-        str_out += "\n";
-        write(fd_emu_out, str_out.c_str(), str_out.length());
-        std::cout << str_out; 
-        std::cout.flush();
-        
         cmdbuf.erase(0, newline+1);
         newline = cmdbuf.find("\n");
         t_last = t_now;
@@ -111,7 +106,7 @@ void EmuPipes::ParseCommand(std::string& cmd) {
     std::vector<std::string> tokens = SplitString(cmd, ' ');
     
     if(tokens.size() == 0) { 
-        HandleParseFailed(); 
+        HandleParseFail(); 
         return; 
     }
     else if(tokens[0] == "TogglePause") { 
@@ -128,12 +123,12 @@ void EmuPipes::ParseCommand(std::string& cmd) {
     }
     else if(tokens[0] == "LoadSlot") { 
         if(tokens.size() < 2) {
-            HandleParseFailed();
+            HandleParseFail();
             return;
         }
         loadslot_idx = strtoint(tokens[1]);
         if((loadslot_idx < 1) | (loadslot_idx > 10)) {
-            HandleParseFailed();
+            HandleParseFail();
             return;
         }
         ::Core::QueueHostJob(EmuPipes::LoadSlot, true); 
@@ -143,7 +138,7 @@ void EmuPipes::ParseCommand(std::string& cmd) {
         bool is_read = (tokens[0] == "ReadMemory");
         if((is_read & (tokens.size() != 3)) | 
           (!is_read & (tokens.size() != 4))) {
-            HandleParseFailed();
+            HandleParseFail();
             return;
         }
 
@@ -154,7 +149,7 @@ void EmuPipes::ParseCommand(std::string& cmd) {
         else if(tokens[1] == "mem2") { memtype = AddressSpace::Type::Mem2; }
         else if(tokens[1] == "fake") { memtype = AddressSpace::Type::Fake; }
         else {
-            HandleParseFailed();
+            HandleParseFail();
             return;
         }
 
@@ -170,7 +165,7 @@ void EmuPipes::ParseCommand(std::string& cmd) {
     }
     else if(tokens[0] == "AddMemBreakpoint") { 
         if(tokens.size() < 2) {
-            HandleParseFailed();
+            HandleParseFail();
             return;
         }
         memaddr = hextou32(tokens[1]);
@@ -181,14 +176,14 @@ void EmuPipes::ParseCommand(std::string& cmd) {
         bool is_read = (tokens[0] == "ReadCPUFReg");
         if((is_read & (tokens.size() != 3)) |
            (!is_read & (tokens.size() != 4))) {
-            HandleParseFailed();
+            HandleParseFail();
             return;
         }
         cpufreg_idx = hextou32(tokens[1]);
         cpufreg_slot = hextou32(tokens[2]);
         if((cpufreg_idx < 1) | (cpufreg_idx > 31) | 
         !((cpufreg_slot == 0) | (cpufreg_slot == 1))) {
-            HandleParseFailed();
+            HandleParseFail();
             return;
         }
         if(is_read) {
@@ -201,14 +196,27 @@ void EmuPipes::ParseCommand(std::string& cmd) {
             return;
         }
     }
-
-    HandleParseFailed();
+    HandleParseFail();
     return;
 }
 
-void EmuPipes::HandleParseFailed(void) {
+void EmuPipes::HandleParseFail(void) {
     str_out += "-1";
+    str_out += "\n";
+    write(fd_emu_out, str_out.c_str(), str_out.length());
+    std::cout << str_out; 
+    std::cout.flush();
+    str_out = "";
     return; 
+}
+
+void EmuPipes::HandleParseSuccess(void) {
+    str_out += "\n";
+    write(fd_emu_out, str_out.c_str(), str_out.length());
+    std::cout << str_out; 
+    std::cout.flush();
+    str_out = "";
+    return;
 }
 
 std::string EmuPipes::u8tohex(u8 val) {
@@ -259,22 +267,26 @@ void EmuPipes::TogglePause(void) {
     else
         ::Core::SetState(::Core::State::Paused, true); 
     str_out += "0";
+    HandleParseSuccess();
 }
 
 void EmuPipes::GetPauseState(void) {
     int is_paused = (::Core::GetState() == ::Core::State::Paused);
     std::string str_is_paused = std::to_string(is_paused);
     str_out += str_is_paused;
+    HandleParseSuccess();
 }
 
 void EmuPipes::FrameAdvance(void) {
     ::Core::DoFrameStep(); 
     str_out += "0";
+    HandleParseSuccess();
 }
 
 void EmuPipes::LoadSlot(void) {
     ::State::Load(loadslot_idx);
     str_out += "0";
+    HandleParseSuccess();
 }
 
 void EmuPipes::ReadMemory(void) {
@@ -283,6 +295,7 @@ void EmuPipes::ReadMemory(void) {
     u8 val = accessors->ReadU8(guard, memaddr);
     std::string val_str = u8tohex(val);
     str_out += val_str;
+    HandleParseSuccess();
 } 
 
 void EmuPipes::WriteMemory(void) {
@@ -290,6 +303,7 @@ void EmuPipes::WriteMemory(void) {
     ::Core::CPUThreadGuard guard(::Core::System::GetInstance());
     accessors->WriteU8(guard, memaddr, memval);
     str_out += "0";
+    HandleParseSuccess();
 }
 
 void EmuPipes::AddMemBreakpoint(void) {
@@ -297,6 +311,7 @@ void EmuPipes::AddMemBreakpoint(void) {
     BreakPoints& bp = m_system.GetPowerPC().GetBreakPoints();
     bp.Add(memaddr);
     str_out += "0";
+    HandleParseSuccess();
 }
 
 void EmuPipes::ReadCPUFReg(void) {
@@ -308,6 +323,7 @@ void EmuPipes::ReadCPUFReg(void) {
         val = m_system.GetPPCState().ps[cpufreg_idx].PS1AsU64();
     std::string str_val = u64tohex(val);
     str_out += str_val;
+    HandleParseSuccess();
 }
 
 void EmuPipes::WriteCPUFReg(void) {
@@ -317,5 +333,6 @@ void EmuPipes::WriteCPUFReg(void) {
     else
         m_system.GetPPCState().ps[cpufreg_idx].SetPS1(cpufreg_val);
     str_out += "0";
+    HandleParseSuccess();
 } 
 }

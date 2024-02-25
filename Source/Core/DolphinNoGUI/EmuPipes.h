@@ -42,7 +42,8 @@ namespace EmuPipes
         static void ReadPipe(void); // To be run each time Host loops
         
         static void ParseCommand(std::string& cmd); 
-        static void HandleParseFailed(void);
+        static void HandleParseFail(void);
+        static void HandleParseSuccess(void);
 
         static std::string u8tohex(u8 val); 
         static std::string u64tohex(u64 val); 
