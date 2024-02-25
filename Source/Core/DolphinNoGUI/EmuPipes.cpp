@@ -210,7 +210,7 @@ void EmuPipes::HandleParseFailed(void) {
 std::string EmuPipes::u8tohex(u8 val) {
     std::stringstream is;
     is.imbue(std::locale::classic());
-    is << std::hex << val;
+    is << std::hex << (int) val;
     return is.str();
 }
 
