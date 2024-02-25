@@ -94,7 +94,12 @@ void EmuPipes::ReadPipe(void) {
         (newline != std::string::npos)) {
         std::string cmd = cmdbuf.substr(0, newline);
         ParseCommand(cmd);
-        write(fd_emu_out, (str_out+"\n").c_str(), str_out.length()+1);
+        
+        str_out += "\n";
+        write(fd_emu_out, str_out.c_str(), str_out.length());
+        std::cout << str_out; 
+        std::cout.flush();
+        
         cmdbuf.erase(0, newline+1);
         newline = cmdbuf.find("\n");
         t_last = t_now;
