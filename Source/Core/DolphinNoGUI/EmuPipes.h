@@ -17,9 +17,6 @@ namespace EmuPipes
 {
     class EmuPipes {
     public:
-        EmuPipes();
-        ~EmuPipes();
-
         static int fd_emu_in;
         static int fd_emu_out;
         static std::string str_emu_in;
@@ -39,6 +36,8 @@ namespace EmuPipes
         static u64 cpufreg_val;
         static int pipe_init;
 
+        static void InitPipes(void);
+        static void ClosePipes(void);
         static void ReadPipe(void); // To be run each time Host loops
         
         static void ParseCommand(std::string& cmd); 

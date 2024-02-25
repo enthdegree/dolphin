@@ -30,6 +30,7 @@
 
 namespace EmuPipes
 {
+    int EmuPipes::pipe_init = 0;
     int EmuPipes::fd_emu_in;
     int EmuPipes::fd_emu_out;
     std::string EmuPipes::cmdbuf;
@@ -44,16 +45,15 @@ namespace EmuPipes
     u8 EmuPipes::cpufreg_idx = 0;
     u8 EmuPipes::cpufreg_slot = 0;
     u64 EmuPipes::cpufreg_val = 0;
-    int EmuPipes::pipe_init = 0;
 
-EmuPipes::EmuPipes()
+void EmuPipes::InitPipes(void)
 {
     std::string dir_path = File::GetUserPath(D_PIPES_IDX);
     str_emu_in = dir_path + "/emu_in";
-    fd_emu_in = open(str_emu_in.c_str(), O_RDWR | O_NONBLOCK);
+    fd_emu_in = open(str_emu_in.c_str(), O_RDONLY | O_NONBLOCK);
     fd_emu_out = open((dir_path + "/emu_out").c_str(), O_RDWR);
     if((fd_emu_in < 0) | (fd_emu_out < 0)) {
-        pipe_init = 0;
+        pipe_init = -1;
         std::cout << "Warning: Couldn't open FIFOs `emu_in`, `emu_out` in " << dir_path << "\n";
         std::cout.flush();
     }
@@ -62,29 +62,21 @@ EmuPipes::EmuPipes()
     }
 }
 
-EmuPipes::~EmuPipes() {
+void EmuPipes::ClosePipes(void) {
     close(fd_emu_in);
     close(fd_emu_out);
-    pipe_init = 0;
-    return;
+    pipe_init = -1;
 }
 
 void EmuPipes::ReadPipe(void) {
-    if(pipe_init == 0) return; // Give up unless the pipes are good
+    if(pipe_init == 0) InitPipes();
+    else if(pipe_init < 0) return; // Give up unless the pipes are good
 
     // Read pending characters off the pipe.
     char buf[PIPE_BUF];
     ssize_t bytes_read = read(fd_emu_in, buf, sizeof buf);
-    while(bytes_read < 0) {
-        close(fd_emu_in);
-        fd_emu_in = open(str_emu_in.c_str(), O_RDWR | O_NONBLOCK);
-        bytes_read = read(fd_emu_in, buf, sizeof buf);
-    }
-    while (bytes_read > 0)
-    {
-        cmdbuf.append(buf, bytes_read);
-        bytes_read = read(fd_emu_in, buf, sizeof buf);
-    }
+    if (bytes_read > 0) cmdbuf.append(buf, bytes_read);
+    // else if(bytes_read < 0) { pipe_init = -1; std::cout << "Bad FD read. (fd, b): " << fd_emu_in << " " << bytes_read << "\n"; std::cout.flush(); }
 
     hrc_time t_now = std::chrono::high_resolution_clock::now();
     auto t_diff = (std::chrono::duration_cast<std::chrono::microseconds>(t_now-t_last)).count();

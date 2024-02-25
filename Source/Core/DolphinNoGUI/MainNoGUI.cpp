@@ -315,10 +315,6 @@ int main(int argc, char* argv[])
   Discord::UpdateDiscordPresence();
 #endif
 
-#ifdef USE_EMU_PIPES
-  EmuPipes::EmuPipes theEmuPipes = EmuPipes::EmuPipes();
-#endif
-
   s_platform->MainLoop();
   Core::Stop();
 
