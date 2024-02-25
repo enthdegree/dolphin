@@ -24,6 +24,7 @@ namespace EmuPipes
         static int fd_emu_out;
         static std::string str_emu_in;
         static std::string cmdbuf;
+        static std::string str_out;
 
         // stores for arguments to emulator controls (the functions below)
         // We have to do it this way because their function signatures must be
