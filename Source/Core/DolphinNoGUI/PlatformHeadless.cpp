@@ -30,10 +30,11 @@ void PlatformHeadless::MainLoop()
     UpdateRunningFlag();
 
 #ifdef USE_EMU_PIPES
-    EmuPipes::EmuPipes::ReadPipe();
+    EmuPipes::EmuPipes::ReadPipe(); 
 #endif
 
     Core::HostDispatchJobs();
+
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 }

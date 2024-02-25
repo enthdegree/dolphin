@@ -154,7 +154,7 @@ void PlatformX11::MainLoop()
     UpdateRunningFlag();
 
 #ifdef USE_EMU_PIPES
-    EmuPipes::EmuPipes::ReadPipe();
+    EmuPipes::EmuPipes::ReadPipe(); 
 #endif
 
     Core::HostDispatchJobs();
