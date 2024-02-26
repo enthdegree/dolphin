@@ -315,7 +315,17 @@ int main(int argc, char* argv[])
   Discord::UpdateDiscordPresence();
 #endif
 
+#ifdef USE_EMU_PIPES
+  std::thread tep(EmuPipes::EmuPipes::Worker); 
+#endif
+
   s_platform->MainLoop();
+
+#ifdef USE_EMU_PIPES
+  EmuPipes::EmuPipes::status = -1;
+  tep.join(); 
+#endif
+
   Core::Stop();
 
   Core::Shutdown();

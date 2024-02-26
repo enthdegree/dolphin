@@ -152,11 +152,6 @@ void PlatformX11::MainLoop()
   while (IsRunning())
   {
     UpdateRunningFlag();
-
-#ifdef USE_EMU_PIPES
-    EmuPipes::EmuPipes::ReadPipe(); 
-#endif
-
     Core::HostDispatchJobs();
     ProcessEvents();
     UpdateWindowPosition();

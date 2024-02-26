@@ -4,29 +4,24 @@
 #pragma once
 
 #include <string>
-#include <chrono>
 
 #include "Core/HW/AddressSpace.h"
 
 // EmuPipes provides a FIFO pipe interface to emulator controls.
 // It runs in the Host main loop, reading `Pipes/emu_in`
 // and printing data to the fifo `Pipes/emu_out`
-using hrc_time = std::chrono::time_point<std::chrono::high_resolution_clock>;
-
 namespace EmuPipes 
 {
     class EmuPipes {
     public:
         static int fd_emu_in;
         static int fd_emu_out;
-        static std::string str_emu_in;
-        static std::string cmdbuf;
+        static std::string str_cmds;
         static std::string str_out;
 
         // stores for arguments to emulator controls (the functions below)
-        // We have to do it this way because their function signatures must be
-        // (void *)(void)
-        static hrc_time t_last;
+        // We have to do it this way because function signatures for the
+        // Host queue are exclusively: (void *)(void)
         static AddressSpace::Type memtype;
         static u32 memaddr;
         static u8 memval;
@@ -34,16 +29,17 @@ namespace EmuPipes
         static u8 cpufreg_idx;
         static u8 cpufreg_slot;
         static u64 cpufreg_val;
-        static int pipe_init;
+        static int status;
 
+        static void Worker(void); 
         static void InitPipes(void);
+        static void ReadPipe(void); 
         static void ClosePipes(void);
-        static void ReadPipe(void); // To be run each time Host loops
-        
-        static void ParseCommand(std::string& cmd); 
+        static void ParseAndDispatch(std::string& cmd); 
         static void HandleParseFail(void);
-        static void HandleParseSuccess(void);
-
+        static void HandleParseSuccess(std::string str_outval=std::string("0"));
+        static void PublishOutput(void); 
+        
         static std::string u8tohex(u8 val); 
         static std::string u64tohex(u64 val); 
         static int strtoint(std::string str_int); 
