@@ -25,6 +25,12 @@ add_library(uicommon
   USBUtils.h
 )
 
+if(USE_EMU_PIPES)
+  add_library(emupipes 
+    EmuPipes.cpp
+    EmuPipes.h)
+endif()
+
 target_link_libraries(uicommon
 PUBLIC
   common

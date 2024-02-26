@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "DolphinNoGUI/Platform.h"
-#include "EmuPipes.h"
 
 #include <OptionParser.h>
 #include <cstddef>
@@ -31,6 +30,9 @@
 #include "UICommon/DiscordPresence.h"
 #endif
 #include "UICommon/UICommon.h"
+#ifdef USE_EMU_PIPES
+#include "UICommon/EmuPipes.h"
+#endif
 
 #include "InputCommon/GCAdapter.h"
 

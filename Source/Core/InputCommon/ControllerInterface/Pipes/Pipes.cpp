@@ -22,12 +22,19 @@
 
 namespace ciface::Pipes
 {
-static const std::array<std::string, 12> s_button_tokens{
-    {"A", "B", "X", "Y", "Z", "START", "L", "R", "D_UP", "D_DOWN", "D_LEFT", "D_RIGHT"}};
+static const std::array<std::string, 19> s_button_tokens{{
+  "A", "B", "1", "2", "-", "+", "Home", 
+  "DUp", "DDown", "DLeft", "DRight", 
+  "ShakeX", "ShakeY", "ShakeZ", 
+  "NunchukC", "NunchukZ", 
+  "NunchukShakeX", "NunchukShakeY", "NunchukShakeZ", }}; 
 
-static const std::array<std::string, 2> s_shoulder_tokens{{"L", "R"}};
-
-static const std::array<std::string, 2> s_axis_tokens{{"MAIN", "C"}};
+static const std::array<std::string, 12> s_axis_tokens{{
+  "IRX", "IRY", 
+  "AccelUpDown", "AccelLeftRight", "AccelForwardBackward", 
+  "GyroPitch", "GyroRoll", "GyroYaw",
+  "SwingForward", "SwingBackward"
+  "NunchukStickX", "NunchukStickY", }};
 
 static double StringToDouble(const std::string& text)
 {
@@ -70,14 +77,9 @@ PipeDevice::PipeDevice(int fd, const std::string& name) : m_fd(fd), m_name(name)
     AddInput(btn);
     m_buttons[tok] = btn;
   }
-  for (const auto& tok : s_shoulder_tokens)
-  {
-    AddAxis(tok, 0.0);
-  }
   for (const auto& tok : s_axis_tokens)
   {
-    AddAxis(tok + " X", 0.5);
-    AddAxis(tok + " Y", 0.5);
+    AddAxis(tok, 0.5);
   }
 }
 
@@ -150,13 +152,6 @@ void PipeDevice::ParseCommand(const std::string& command)
     {
       double value = StringToDouble(tokens[2]);
       SetAxis(tokens[1], (value / 2.0) + 0.5);
-    }
-    else if (tokens.size() == 4)
-    {
-      double x = StringToDouble(tokens[2]);
-      double y = StringToDouble(tokens[3]);
-      SetAxis(tokens[1] + " X", x);
-      SetAxis(tokens[1] + " Y", y);
     }
   }
 }

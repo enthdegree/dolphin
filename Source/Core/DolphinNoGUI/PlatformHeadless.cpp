@@ -5,7 +5,6 @@
 #include <thread>
 #include "Core/Core.h"
 #include "DolphinNoGUI/Platform.h"
-#include "EmuPipes.h"
 
 namespace
 {

@@ -10,7 +10,6 @@
 static constexpr auto X_None = None;
 
 #include "DolphinNoGUI/Platform.h"
-#include "EmuPipes.h"
 
 #include "Common/MsgHandler.h"
 #include "Core/Config/MainSettings.h"
