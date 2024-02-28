@@ -20,6 +20,8 @@ namespace ciface::Pipes
 // {PRESS, RELEASE} {A, B, X, Y, Z, START, L, R, D_UP, D_DOWN, D_LEFT, D_RIGHT}
 // SET {L, R} [0, 1]
 // SET {MAIN, C} [0, 1] [0, 1]
+//
+// There are also emulated Wiimote buttons 
 
 void PopulateDevices();
 
