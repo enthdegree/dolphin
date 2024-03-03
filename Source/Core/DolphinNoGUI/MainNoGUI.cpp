@@ -20,6 +20,7 @@
 #include "Common/ScopeGuard.h"
 #include "Common/StringUtil.h"
 #include "Core/Boot/Boot.h"
+#include "Core/Config/MainSettings.h"
 #include "Core/BootManager.h"
 #include "Core/Core.h"
 #include "Core/DolphinAnalytics.h"
@@ -319,6 +320,7 @@ int main(int argc, char* argv[])
 
 #ifdef USE_EMU_PIPES
   std::thread tep(EmuPipes::EmuPipes::Worker); 
+  Config::SetBaseOrCurrent(Config::MAIN_ENABLE_DEBUGGING, true);
 #endif
 
   s_platform->MainLoop();

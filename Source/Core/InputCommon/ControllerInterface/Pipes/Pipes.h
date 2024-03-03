@@ -17,18 +17,19 @@ namespace ciface::Pipes
 // Command syntax is as follows, where curly brackets are one-of and square
 // brackets are inclusive numeric ranges. Cases are sensitive. Numeric inputs
 // are clamped to [0, 1] and otherwise invalid commands are discarded.
-// {PRESS, RELEASE} {A, B, X, Y, Z, START, L, R, D_UP, D_DOWN, D_LEFT, D_RIGHT}
-// SET {L, R} [0, 1]
-// SET {MAIN, C} [0, 1] [0, 1]
+// {Press, Release} {A, B, X, Y, Z, Start, L, R, DUP, DDown, DLeft, DRight}
+// Set {L, R} [0, 1]
+// Set {Main, C} [0, 1] [0, 1]
 //
 // There are also emulated Wiimote buttons 
+// Ingested commands published in `*_out`
 
 void PopulateDevices();
 
 class PipeDevice : public Core::Device
 {
 public:
-  PipeDevice(int fd, const std::string& name);
+  PipeDevice(int fd_in, int fd_out, const std::string& name);
   ~PipeDevice();
 
   Core::DeviceRemoval UpdateInput() override;
@@ -53,7 +54,8 @@ private:
   void ParseCommand(const std::string& command);
   void SetAxis(const std::string& entry, double value);
 
-  const int m_fd;
+  const int m_fd_in;
+  const int m_fd_out;
   const std::string m_name;
   std::string m_buf;
   std::map<std::string, PipeInput*> m_buttons;

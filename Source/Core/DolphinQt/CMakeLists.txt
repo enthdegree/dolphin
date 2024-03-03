@@ -409,6 +409,13 @@ PRIVATE
   ${Qt6Gui_PRIVATE_INCLUDE_DIRS}
 )
 
+if(USE_EMU_PIPES)
+    target_link_libraries(dolphin-emu
+        PRIVATE
+        emupipes
+    )
+endif()
+
 target_link_libraries(dolphin-emu
 PRIVATE
   core

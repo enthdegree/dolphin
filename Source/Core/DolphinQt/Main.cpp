@@ -41,6 +41,9 @@
 
 #include "UICommon/CommandLineParse.h"
 #include "UICommon/UICommon.h"
+#ifdef USE_EMU_PIPES
+#include "UICommon/EmuPipes.h"
+#endif
 
 static bool QtMsgAlertHandler(const char* caption, const char* text, bool yes_no,
                               Common::MsgType style)
@@ -169,6 +172,10 @@ int main(int argc, char* argv[])
   UICommon::Init();
   Resources::Init();
   Settings::Instance().SetBatchModeEnabled(options.is_set("batch"));
+    
+#ifdef USE_EMU_PIPES
+  std::thread tep(EmuPipes::EmuPipes::Worker); 
+#endif
 
   // Hook up alerts from core
   Common::RegisterMsgAlertHandler(QtMsgAlertHandler);
@@ -292,6 +299,11 @@ int main(int argc, char* argv[])
 
     retval = app.exec();
   }
+  
+#ifdef USE_EMU_PIPES
+  EmuPipes::EmuPipes::status = -1;
+  tep.join(); 
+#endif
 
   Core::Shutdown();
   UICommon::Shutdown();

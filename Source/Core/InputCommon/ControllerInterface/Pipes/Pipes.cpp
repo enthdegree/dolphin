@@ -22,7 +22,7 @@
 
 namespace ciface::Pipes
 {
-static const std::array<std::string, 50> s_button_tokens{{
+static const std::array<std::string, 60> s_button_tokens{{
   "A", "B", "1", "2", "-", "+", "Home", // Emulated Wiimote buttons
   "DUp", "DDown", "DLeft", "DRight", 
   "ShakeX", "ShakeY", "ShakeZ", 
@@ -31,11 +31,11 @@ static const std::array<std::string, 50> s_button_tokens{{
   "GyroPitchUp", "GyroPitchDown", 
   "GyroRollLeft", "GyroRollBackward", 
   "GyroYawLeft",  "GyroYawRight",
-  "SwingForward", "SwingBackward"
+  "SwingForward", "SwingBackward",
   "NunchukStickUp", "NunchukStickDown", "NunchukStickLeft", "NunchukStickRight",   
   "NunchukShakeX", "NunchukShakeY", "NunchukShakeZ", 
   "NunchukC", "NunchukZ", 
-  "X", "Y", "Z", "START", "L", "R", "D_UP", "D_DOWN", "D_LEFT", "D_RIGHT", }}; // GBA buttons
+  "X", "Y", "Z", "Start", "L", "R", }}; // GBA buttons
                                                                                
 static const std::array<std::string, 10> s_shoulder_tokens{{"L", "R"}};
 
@@ -65,18 +65,22 @@ void PopulateDevices()
   for (unsigned int i = 0; i < fst.size; ++i)
   {
     const File::FSTEntry& child = fst.children[i];
-    if (child.isDirectory)
-      continue;
-    if (child.physicalName.rfind("emu",0) == 0) // Don't listen on emulator pipes
-        continue;
-    int fd = open(child.physicalName.c_str(), O_RDONLY | O_NONBLOCK);
-    if (fd < 0)
-      continue;
-    g_controller_interface.AddDevice(std::make_shared<PipeDevice>(fd, child.virtualName));
+    if (child.isDirectory) continue;
+    if (child.physicalName.starts_with("emu")) continue; // Don't listen on emulator pipes
+    if (child.physicalName.ends_with("_in")) { // Only try to listen on *_in pipes
+        int fd_in = open(child.physicalName.c_str(), O_RDONLY | O_NONBLOCK);
+        if (fd_in < 0)
+          continue;
+        std::string str_outname = child.physicalName.substr(0, child.physicalName.size()-3) + "_out";
+        int fd_out = open(str_outname.c_str(), O_RDWR);
+        if (fd_out < 0)
+          continue;
+        g_controller_interface.AddDevice(std::make_shared<PipeDevice>(fd_in, fd_out, child.virtualName));
+    }
   }
 }
 
-PipeDevice::PipeDevice(int fd, const std::string& name) : m_fd(fd), m_name(name)
+PipeDevice::PipeDevice(int fd_in, int fd_out, const std::string& name) : m_fd_in(fd_in), m_fd_out(fd_out), m_name(name)
 {
   for (const auto& tok : s_button_tokens)
   {
@@ -97,7 +101,8 @@ PipeDevice::PipeDevice(int fd, const std::string& name) : m_fd(fd), m_name(name)
 
 PipeDevice::~PipeDevice()
 {
-  close(m_fd);
+  close(m_fd_in);
+  close(m_fd_out);
 }
 
 Core::DeviceRemoval PipeDevice::UpdateInput()
@@ -105,11 +110,11 @@ Core::DeviceRemoval PipeDevice::UpdateInput()
   // Read any pending characters off the pipe. If we hit a newline,
   // then dequeue a command off the front of m_buf and parse it.
   char buf[32];
-  ssize_t bytes_read = read(m_fd, buf, sizeof buf);
+  ssize_t bytes_read = read(m_fd_in, buf, sizeof buf);
   while (bytes_read > 0)
   {
     m_buf.append(buf, bytes_read);
-    bytes_read = read(m_fd, buf, sizeof buf);
+    bytes_read = read(m_fd_in, buf, sizeof buf);
   }
   std::size_t newline = m_buf.find("\n");
   while (newline != std::string::npos)
@@ -152,13 +157,13 @@ void PipeDevice::ParseCommand(const std::string& command)
   const std::vector<std::string> tokens = SplitString(command, ' ');
   if (tokens.size() < 2 || tokens.size() > 4)
     return;
-  if (tokens[0] == "PRESS" || tokens[0] == "RELEASE")
+  if (tokens[0] == "Press" || tokens[0] == "Release")
   {
     auto search = m_buttons.find(tokens[1]);
     if (search != m_buttons.end())
-      search->second->SetState(tokens[0] == "PRESS" ? 1.0 : 0.0);
+      search->second->SetState(tokens[0] == "Press" ? 1.0 : 0.0);
   }
-  else if (tokens[0] == "SET")
+  else if (tokens[0] == "Set")
   {
     if (tokens.size() == 3)
     {
@@ -172,6 +177,12 @@ void PipeDevice::ParseCommand(const std::string& command)
       SetAxis(tokens[1] + " X", x);
       SetAxis(tokens[1] + " Y", y);
     }
+  } else {
+      return;
   }
+
+  // Publish parse success
+  write(m_fd_out, (command+"\n").c_str(), command.length()+1);
+  std::cout << command << std::endl;
 }
 }  // namespace ciface::Pipes

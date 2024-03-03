@@ -23,8 +23,11 @@
 #include "Core/Core.h"
 #include "Core/State.h"
 #include "Core/System.h"
+#include "Core/HW/AddressSpace.h"
 #include "Core/PowerPC/PowerPC.h"
 #include "Core/PowerPC/BreakPoints.h"
+#include "Core/Debugger/PPCDebugInterface.h"
+
 
 #include "Common/FileUtil.h"
 #include "Common/StringUtil.h"
@@ -61,7 +64,7 @@ namespace EmuPipes
             }
 
             // Delay
-            //std::this_thread::sleep_for(std::chrono::milliseconds(EMUPIPE_DELAY_MS));
+            // std::this_thread::sleep_for(std::chrono::milliseconds(EMUPIPE_DELAY_MS));
         }
         ClosePipes();
     }
@@ -166,13 +169,14 @@ namespace EmuPipes
                 return;
             }
         }
-        else if(tokens[0] == "AddMemBreakpoint") { 
+        else if(tokens[0] == "ToggleBreakpoint") { 
             if(tokens.size() < 2) {
                 HandleParseFail();
                 return;
             }
             memaddr = hextou32(tokens[1]);
-            ::Core::RunOnCPUThread(EmuPipes::WriteMemory, true); 
+            std::cout << "adding bp " << memaddr << std::endl;
+            ::Core::QueueHostJob(EmuPipes::ToggleBreakpoint, true); 
             return;
         }
         else if((tokens[0] == "ReadCPUFReg") | (tokens[0] == "WriteCPUFReg")) { 
@@ -301,10 +305,8 @@ namespace EmuPipes
         HandleParseSuccess();
     }
 
-    void EmuPipes::AddMemBreakpoint(void) {
-        ::Core::System& m_system = ::Core::System::GetInstance();
-        BreakPoints& bp = m_system.GetPowerPC().GetBreakPoints();
-        bp.Add(memaddr);
+    void EmuPipes::ToggleBreakpoint(void) { // Add an instruction breakpoint
+        ::Core::System::GetInstance().GetPowerPC().GetDebugInterface().ToggleBreakpoint(memaddr);
         HandleParseSuccess();
     }
 

@@ -55,7 +55,7 @@ namespace EmuPipes
         static void WriteMemory(void); // Reads memtype, memaddr, memval
 
         // To be run on CPU thread
-        static void AddMemBreakpoint(void); // Reads memaddr 
+        static void ToggleBreakpoint(void); // Reads memaddr 
         static void ReadCPUFReg(void); // Reads cpufreg_idx, cpufreg_slot
         static void WriteCPUFReg(void); // Reads cpufreg_idx, cpufreg_slot
 };
