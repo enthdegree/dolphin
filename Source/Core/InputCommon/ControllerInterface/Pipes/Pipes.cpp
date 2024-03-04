@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <vector>
 
+#include "Core/Core.h"
 #include "Common/FileUtil.h"
 #include "Common/StringUtil.h"
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
@@ -182,7 +183,8 @@ void PipeDevice::ParseCommand(const std::string& command)
   }
 
   // Publish parse success
-  write(m_fd_out, (command+"\n").c_str(), command.length()+1);
-  std::cout << command << std::endl;
+  auto fn_publish = [this](void) {write(m_fd_out, "0\n", 2);};
+  // write(m_fd_out, (command+"\n").c_str(), command.length()+1);
+  ::Core::QueueHostJob(fn_publish, true); 
 }
 }  // namespace ciface::Pipes

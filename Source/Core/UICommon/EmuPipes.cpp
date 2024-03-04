@@ -119,8 +119,8 @@ namespace EmuPipes
             ::Core::QueueHostJob(EmuPipes::TogglePause, true); 
             return; 
         }
-        else if(tokens[0] == "GetPauseState") { 
-            ::Core::QueueHostJob(EmuPipes::GetPauseState, true); 
+        else if(tokens[0] == "IsPaused") { 
+            ::Core::QueueHostJob(EmuPipes::IsPaused, true); 
             return; 
         }
         else if(tokens[0] == "FrameAdvance") { 
@@ -128,26 +128,13 @@ namespace EmuPipes
             return; 
         }
         else if(tokens[0] == "LoadSlot") { 
-            if(tokens.size() < 2) {
-                HandleParseFail();
-                return;
-            }
             loadslot_idx = strtoint(tokens[1]);
-            if((loadslot_idx < 1) | (loadslot_idx > 10)) {
-                HandleParseFail();
-                return;
-            }
             ::Core::QueueHostJob(EmuPipes::LoadSlot, true); 
             return;
         }
         else if((tokens[0] == "ReadMemory") | (tokens[0] == "WriteMemory")) { 
             bool is_read = (tokens[0] == "ReadMemory");
-            if((is_read & (tokens.size() != 3)) | 
-                    (!is_read & (tokens.size() != 4))) {
-                HandleParseFail();
-                return;
-            }
-
+            // Get the memory block we're reading
             if(tokens[1] == "eff") { memtype = AddressSpace::Type::Effective; }
             else if(tokens[1] == "aux") { memtype = AddressSpace::Type::Auxiliary; }
             else if(tokens[1] == "phy") { memtype = AddressSpace::Type::Physical; }
@@ -170,36 +157,26 @@ namespace EmuPipes
             }
         }
         else if(tokens[0] == "ToggleBreakpoint") { 
-            if(tokens.size() < 2) {
-                HandleParseFail();
-                return;
-            }
             memaddr = hextou32(tokens[1]);
-            std::cout << "adding bp " << memaddr << std::endl;
             ::Core::QueueHostJob(EmuPipes::ToggleBreakpoint, true); 
+            return;
+        }
+        else if(tokens[0] == "IsBreakpoint") { 
+            memaddr = hextou32(tokens[1]);
+            ::Core::QueueHostJob(EmuPipes::IsBreakpoint, true); 
             return;
         }
         else if((tokens[0] == "ReadCPUFReg") | (tokens[0] == "WriteCPUFReg")) { 
             bool is_read = (tokens[0] == "ReadCPUFReg");
-            if((is_read & (tokens.size() != 3)) |
-                    (!is_read & (tokens.size() != 4))) {
-                HandleParseFail();
-                return;
-            }
             cpufreg_idx = hextou32(tokens[1]);
             cpufreg_slot = hextou32(tokens[2]);
-            if((cpufreg_idx < 1) | (cpufreg_idx > 31) | 
-                    !((cpufreg_slot == 0) | (cpufreg_slot == 1))) {
-                HandleParseFail();
-                return;
-            }
             if(is_read) {
-                ::Core::RunOnCPUThread(EmuPipes::ReadCPUFReg, true); 
+                ::Core::QueueHostJob(EmuPipes::ReadCPUFReg, true); // RunOnCPUThread
                 return;
             }
             else {
                 cpufreg_val = hextou32(tokens[3]);
-                ::Core::RunOnCPUThread(EmuPipes::WriteCPUFReg, true); 
+                ::Core::QueueHostJob(EmuPipes::WriteCPUFReg, true); // RunOnCPUThread
                 return;
             }
         } else { 
@@ -211,12 +188,12 @@ namespace EmuPipes
 
     void EmuPipes::HandleParseFail(void) {
         str_out += "-1";
-        PublishOutput();
+        ::Core::QueueHostJob(PublishOutput, true); 
     }
 
     void EmuPipes::HandleParseSuccess(std::string str_outval) {
         str_out += str_outval;
-        PublishOutput();
+        ::Core::QueueHostJob(PublishOutput, true); 
     }
 
     void EmuPipes::PublishOutput(void) {
@@ -274,7 +251,7 @@ namespace EmuPipes
         HandleParseSuccess();
     }
 
-    void EmuPipes::GetPauseState(void) {
+    void EmuPipes::IsPaused(void) {
         int is_paused = (::Core::GetState() == ::Core::State::Paused);
         std::string str_is_paused = std::to_string(is_paused);
         HandleParseSuccess(str_is_paused);
@@ -308,6 +285,11 @@ namespace EmuPipes
     void EmuPipes::ToggleBreakpoint(void) { // Add an instruction breakpoint
         ::Core::System::GetInstance().GetPowerPC().GetDebugInterface().ToggleBreakpoint(memaddr);
         HandleParseSuccess();
+    }
+
+    void EmuPipes::IsBreakpoint(void) { // Query breakpoint
+        bool is_bp = ::Core::System::GetInstance().GetPowerPC().GetDebugInterface().IsBreakpoint(memaddr);
+        HandleParseSuccess(std::to_string(is_bp));
     }
 
     void EmuPipes::ReadCPUFReg(void) {

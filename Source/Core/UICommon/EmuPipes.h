@@ -38,7 +38,6 @@ namespace EmuPipes
         static void ParseAndDispatch(std::string& cmd); 
         static void HandleParseFail(void);
         static void HandleParseSuccess(std::string str_outval=std::string("0"));
-        static void PublishOutput(void); 
         
         static std::string u8tohex(u8 val); 
         static std::string u64tohex(u64 val); 
@@ -46,16 +45,18 @@ namespace EmuPipes
         static u32 hextou32(std::string str_hex);
         static u8 hextou8(std::string str_hex);
 
-        // To be run on Host thread
+        // To be queued on Host thread
         static void TogglePause(void);
-        static void GetPauseState(void);
+        static void IsPaused(void);
         static void FrameAdvance(void);
         static void LoadSlot(void); // Reads loadslot
         static void ReadMemory(void); // Reads memtype, memaddr
         static void WriteMemory(void); // Reads memtype, memaddr, memval
+        static void PublishOutput(void); // All the 
+        static void ToggleBreakpoint(void); // Reads memaddr 
+        static void IsBreakpoint(void); // Reads memaddr 
 
         // To be run on CPU thread
-        static void ToggleBreakpoint(void); // Reads memaddr 
         static void ReadCPUFReg(void); // Reads cpufreg_idx, cpufreg_slot
         static void WriteCPUFReg(void); // Reads cpufreg_idx, cpufreg_slot
 };
