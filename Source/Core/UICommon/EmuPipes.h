@@ -46,7 +46,8 @@ namespace EmuPipes
         static u8 hextou8(std::string str_hex);
 
         // To be queued on Host thread
-        static void TogglePause(void);
+        static void Pause(void);
+        static void Resume(void);
         static void IsPaused(void);
         static void FrameAdvance(void);
         static void LoadSlot(void); // Reads loadslot

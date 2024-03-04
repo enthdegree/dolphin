@@ -27,7 +27,7 @@
 #include "Core/PowerPC/PowerPC.h"
 #include "Core/PowerPC/BreakPoints.h"
 #include "Core/Debugger/PPCDebugInterface.h"
-
+#include "InputCommon/ControllerInterface/ControllerInterface.h"
 
 #include "Common/FileUtil.h"
 #include "Common/StringUtil.h"
@@ -115,8 +115,12 @@ namespace EmuPipes
             HandleParseFail(); 
             return; 
         }
-        else if(tokens[0] == "TogglePause") { 
-            ::Core::QueueHostJob(EmuPipes::TogglePause, true); 
+        else if(tokens[0] == "Pause") { 
+            ::Core::QueueHostJob(EmuPipes::Pause, true); 
+            return; 
+        }
+        else if(tokens[0] == "Resume") { 
+            ::Core::QueueHostJob(EmuPipes::Resume, true); 
             return; 
         }
         else if(tokens[0] == "IsPaused") { 
@@ -242,12 +246,13 @@ namespace EmuPipes
         return val;
     }
 
-    void EmuPipes::TogglePause(void) {
-        ::Core::State theState = ::Core::GetState();
-        if(theState == ::Core::State::Paused) 
-            ::Core::SetState(::Core::State::Running, true); 
-        else
-            ::Core::SetState(::Core::State::Paused, true); 
+    void EmuPipes::Resume(void) {
+        ::Core::SetState(::Core::State::Running, false); 
+        HandleParseSuccess();
+    }
+
+    void EmuPipes::Pause(void) {
+        ::Core::SetState(::Core::State::Paused, false);
         HandleParseSuccess();
     }
 
@@ -258,8 +263,11 @@ namespace EmuPipes
     }
 
     void EmuPipes::FrameAdvance(void) {
-        ::Core::DoFrameStep(); 
-        HandleParseSuccess();
+        g_controller_interface.UpdateInput();
+        auto fn = [](void) { 
+            ::Core::DoFrameStep(); 
+            HandleParseSuccess(); };
+        ::Core::QueueHostJob(fn, true); // Wait to queue successive jobs until after the last ones have run
     }
 
     void EmuPipes::LoadSlot(void) {
