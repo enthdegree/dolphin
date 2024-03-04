@@ -23,12 +23,15 @@
 #include "Core/Core.h"
 #include "Core/State.h"
 #include "Core/System.h"
+#include "Core/FreeLookManager.h"
+#include "Core/HW/CPU.h"
 #include "Core/HW/AddressSpace.h"
 #include "Core/PowerPC/PowerPC.h"
 #include "Core/PowerPC/BreakPoints.h"
 #include "Core/Debugger/PPCDebugInterface.h"
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
 
+#include "Common/Thread.h"
 #include "Common/FileUtil.h"
 #include "Common/StringUtil.h"
 
@@ -62,9 +65,6 @@ namespace EmuPipes
                 ParseAndDispatch(cmd); 
                 str_cmds.erase(0, newline+1);
             }
-
-            // Delay
-            // std::this_thread::sleep_for(std::chrono::milliseconds(EMUPIPE_DELAY_MS));
         }
         ClosePipes();
     }
@@ -114,6 +114,9 @@ namespace EmuPipes
         if(tokens.size() == 0) { 
             HandleParseFail(); 
             return; 
+        }
+        else if(tokens[0] == "UpdateInput") {
+            ::Core::QueueHostJob(EmuPipes::UpdateInput, true); 
         }
         else if(tokens[0] == "Pause") { 
             ::Core::QueueHostJob(EmuPipes::Pause, true); 
@@ -246,6 +249,16 @@ namespace EmuPipes
         return val;
     }
 
+    void EmuPipes::UpdateInput(void) {
+        g_controller_interface.SetCurrentInputChannel(ciface::InputChannel::FreeLook);
+        g_controller_interface.UpdateInput();
+        FreeLook::UpdateInput();
+
+        g_controller_interface.SetCurrentInputChannel(ciface::InputChannel::Host);
+        g_controller_interface.UpdateInput();
+        HandleParseSuccess();
+    }
+
     void EmuPipes::Resume(void) {
         ::Core::SetState(::Core::State::Running, false); 
         HandleParseSuccess();
@@ -263,11 +276,11 @@ namespace EmuPipes
     }
 
     void EmuPipes::FrameAdvance(void) {
-        g_controller_interface.UpdateInput();
-        auto fn = [](void) { 
-            ::Core::DoFrameStep(); 
-            HandleParseSuccess(); };
-        ::Core::QueueHostJob(fn, true); // Wait to queue successive jobs until after the last ones have run
+        ::Core::DoFrameStep(); 
+        while(! ::Core::System::GetInstance().GetCPU().IsStepping()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        HandleParseSuccess();
     }
 
     void EmuPipes::LoadSlot(void) {
