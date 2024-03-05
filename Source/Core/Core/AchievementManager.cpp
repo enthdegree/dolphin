@@ -24,8 +24,6 @@
 #include "VideoCommon/OnScreenDisplay.h"
 #include "VideoCommon/VideoEvents.h"
 
-static constexpr bool hardcore_mode_enabled = false;
-
 static std::unique_ptr<OSD::Icon> DecodeBadgeToOSDIcon(const AchievementManager::Badge& badge);
 
 AchievementManager& AchievementManager::GetInstance()
@@ -373,12 +371,13 @@ void AchievementManager::ActivateDeactivateLeaderboards()
 {
   if (!Config::Get(Config::RA_ENABLED) || !IsLoggedIn())
     return;
-  bool leaderboards_enabled = Config::Get(Config::RA_LEADERBOARDS_ENABLED);
+  bool leaderboards_enabled =
+      Config::Get(Config::RA_LEADERBOARDS_ENABLED) && Config::Get(Config::RA_HARDCORE_ENABLED);
   for (u32 ix = 0; ix < m_game_data.num_leaderboards; ix++)
   {
     auto leaderboard = m_game_data.leaderboards[ix];
     u32 leaderboard_id = leaderboard.id;
-    if (m_is_game_loaded && leaderboards_enabled && hardcore_mode_enabled)
+    if (m_is_game_loaded && leaderboards_enabled)
     {
       rc_runtime_activate_lboard(&m_runtime, leaderboard_id, leaderboard.definition, nullptr, 0);
       m_queue.EmplaceItem([this, leaderboard_id] {
@@ -752,8 +751,6 @@ void AchievementManager::AchievementEventHandler(const rc_runtime_event_t* runti
       break;
     }
   }
-
-  m_update_callback();
 }
 
 std::recursive_mutex& AchievementManager::GetLock()
@@ -798,6 +795,7 @@ AchievementManager::PointSpread AchievementManager::TallyScore() const
   PointSpread spread{};
   if (!IsGameLoaded())
     return spread;
+  bool hardcore_mode_enabled = Config::Get(Config::RA_HARDCORE_ENABLED);
   for (const auto& entry : m_unlock_map)
   {
     if (entry.second.category != RC_ACHIEVEMENT_CATEGORY_CORE)
@@ -908,6 +906,7 @@ void AchievementManager::CloseGame()
     if (m_is_game_loaded)
     {
       m_is_game_loaded = false;
+      m_active_challenges.clear();
       ActivateDeactivateAchievements();
       ActivateDeactivateLeaderboards();
       ActivateDeactivateRichPresence();
@@ -1303,6 +1302,7 @@ void AchievementManager::ActivateDeactivateAchievement(AchievementId id, bool en
   const UnlockStatus& status = it->second;
   u32 index = status.game_data_index;
   bool active = (rc_runtime_get_achievement(&m_runtime, id) != nullptr);
+  bool hardcore_mode_enabled = Config::Get(Config::RA_HARDCORE_ENABLED);
 
   // Deactivate achievements if game is not loaded
   bool activate = m_is_game_loaded;
@@ -1357,6 +1357,7 @@ AchievementManager::ResponseType AchievementManager::AwardAchievement(Achievemen
 {
   std::string username = Config::Get(Config::RA_USERNAME);
   std::string api_token = Config::Get(Config::RA_API_TOKEN);
+  bool hardcore_mode_enabled = Config::Get(Config::RA_HARDCORE_ENABLED);
   rc_api_award_achievement_request_t award_request = {.username = username.c_str(),
                                                       .api_token = api_token.c_str(),
                                                       .achievement_id = achievement_id,
@@ -1426,7 +1427,7 @@ void AchievementManager::DisplayWelcomeMessage()
 {
   std::lock_guard lg{m_lock};
   PointSpread spread = TallyScore();
-  if (hardcore_mode_enabled)
+  if (Config::Get(Config::RA_HARDCORE_ENABLED))
   {
     OSD::AddMessage(
         fmt::format("You have {}/{} achievements worth {}/{} points", spread.hard_unlocks,
@@ -1451,6 +1452,7 @@ void AchievementManager::DisplayWelcomeMessage()
 
 void AchievementManager::HandleAchievementTriggeredEvent(const rc_runtime_event_t* runtime_event)
 {
+  bool hardcore_mode_enabled = Config::Get(Config::RA_HARDCORE_ENABLED);
   const auto event_id = runtime_event->id;
   auto it = m_unlock_map.find(event_id);
   if (it == m_unlock_map.end())
@@ -1459,7 +1461,6 @@ void AchievementManager::HandleAchievementTriggeredEvent(const rc_runtime_event_
     return;
   }
   it->second.session_unlock_count++;
-  m_queue.EmplaceItem([this, event_id] { AwardAchievement(event_id); });
   AchievementId game_data_index = it->second.game_data_index;
   OSD::AddMessage(fmt::format("Unlocked: {} ({})", m_game_data.achievements[game_data_index].title,
                               m_game_data.achievements[game_data_index].points),
@@ -1470,6 +1471,7 @@ void AchievementManager::HandleAchievementTriggeredEvent(const rc_runtime_event_
                       nullptr);
   if (m_game_data.achievements[game_data_index].category == RC_ACHIEVEMENT_CATEGORY_CORE)
   {
+    m_queue.EmplaceItem([this, event_id] { AwardAchievement(event_id); });
     PointSpread spread = TallyScore();
     if (spread.hard_points == spread.total_points &&
         it->second.remote_unlock_status != UnlockStatus::UnlockType::HARDCORE)
