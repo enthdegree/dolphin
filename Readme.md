@@ -5,12 +5,15 @@ It also adds Emulated Wiimote buttons to the usual pipe input.
 
 ## Setup
 
- 1. Follow this guide for the Portable build: https://github.com/dolphin-emu/dolphin/wiki/Building-for-Linux
+ 1. Follow this guide for the Portable build: https://github.com/dolphin-emu/dolphin/wiki/Building-for-Linux .
     In the `cmake` command append the option `-DUSE_EMU_PIPES`
- 2. Make & configure the pipes. In the build directory (e.g. `dolphin/Build/Binaries/user/`) create a subdirectory named `Pipes`
-    Inside `[...]/user/Pipes/` create four fifos with `mkfifo`: `wiimote_in wiimote_out emu_in emu_out`
- 3. Configure Dolphin. In Dolphin controller settings, set the Emulated Wiimote to use `Pipe/0/wiimote_in` as its input.
+ 2. Make & configure the pipes. 
+    In the build directory (e.g. `dolphin/Build/Binaries/user/`) create a subdirectory named `Pipes`
+    Inside `[...]/user/Pipes/` create four fifos with `mkfifo`: `wiimote_in, wiimote_out, emu_in, emu_out.`
+ 3. Configure Dolphin. 
+    In Dolphin controller settings, set the Emulated Wiimote to use `Pipe/0/wiimote_in` as its input.
     Copy `dolphin/WiimoteNew_Pipes.ini` to `dolphin/Build/Binaries/user/Conf/WiimoteNew.ini`.
+    Here may also want to uncap the emulator speed (set it to `Unlimited`).
 
 ## Emulated Wiimote usage
 To emulate a Wiimote action, write one of the following lines (case sensitive) to the FIFO `wiimote_in`
@@ -19,7 +22,7 @@ To emulate a Wiimote action, write one of the following lines (case sensitive) t
     [Set] [Wiimote axis] X Y
 ````
 where `Wiimote button`, `Wiimote axis` are from the lists below and where `X,Y` are each decimals between 0.0 and 1.0 with 10+ digits precision.
-Once the action is read, `0` will be printed to `wiimote_out`
+Once the action is read, `0` will be printed to `wiimote_out`.
 
 ````
 Wiimote buttons:
@@ -42,16 +45,15 @@ Wiimote axes:
 ## Dolphin pipe control usage
 Only a few emulator operations are currently implemented.
 To perform an emulator operation, write a line `[command]` into the FIFO `emu_in`. 
-Once completed, `[command] [retval]` will be written to `emu_out`. 
-If parsing `command` failed, `retval` will be `-1`. 
-If parsing `command` succeeded and not otherwise specified, `retval` will be `0`
-Otherwise `retval` will be hexidecimal characters.
+Once completed, `[command] [retval]` will be written to `emu_out`: 
+- If parsing `command` failed, `retval` will be `-1`.
+- If parsing `command` succeeded and not otherwise specified, `retval` will be `0`.
+- Otherwise `retval` will be hexidecimal characters.
 
 Warning: there's no safety checks for the following CPU and Memory read/writes. 
 If you do a bad one it will segfault Dolphin.
 
 `command` is one of the following:
-
  - `UpdateInput`: Force Dolphin to poll inputs (e.g. if you recently wrote something to `wiimote_in`)
  - `Pause`, `Resume`
  - `IsPaused`: Print 0 if running, 1 otherwise
