@@ -241,12 +241,7 @@ namespace EmuPipes
     }
 
     u8 EmuPipes::hextou8(std::string str_hex) {
-        std::stringstream is;
-        u8 val;
-        is.imbue(std::locale::classic());
-        is << std::hex << str_hex;
-        is >> val;
-        return val;
+        return (u8) strtoul(str_hex.c_str(), nullptr, 16);
     }
 
     void EmuPipes::UpdateInput(void) {
