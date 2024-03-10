@@ -1,3 +1,104 @@
+# Dolphin emulator controllable via named pipes 
+
+This branch adds a compile option which adds facility to manipulate the Dolphin debugger via pipes on Linux.
+It also adds Emulated Wiimote buttons to the usual pipe input.
+
+## Setup
+
+ 1. Follow this guide for the Portable build: https://github.com/dolphin-emu/dolphin/wiki/Building-for-Linux
+    In the `cmake` command append the option `-DUSE_EMU_PIPES`
+ 2. Make & configure the pipes. In the build directory (e.g. `dolphin/Build/Binaries/user/`) create a subdirectory named `Pipes`
+    Inside `[...]/user/Pipes/` create four fifos with `mkfifo`: `wiimote_in wiimote_out emu_in emu_out`
+ 3. Configure Dolphin. In Dolphin controller settings, set the Emulated Wiimote to use `Pipe/0/wiimote_in` as its input.
+    Copy `dolphin/WiimoteNew_Pipes.ini` to `dolphin/Build/Binaries/user/Conf/WiimoteNew.ini`.
+
+## Emulated Wiimote usage
+To emulate a Wiimote action, write one of the following lines (case sensitive) to the FIFO `wiimote_in`
+````
+    [Press|Release] [Wiimote button]
+    [Set] [Wiimote axis] X Y
+````
+where `Wiimote button`, `Wiimote axis` are from the lists below and where `X,Y` are each decimals between 0.0 and 1.0 with 10+ digits precision.
+Once the action is read, `0` will be printed to `wiimote_out`
+
+````
+Wiimote buttons:
+    A B 1 2 - + Home 
+    DUp DDown DLeft DRight 
+    ShakeX ShakeY ShakeZ 
+    IRUp IRDown IRLeft IRRight  
+    AccelUp AccelDown AccelLeft AccelRight AccelForward AccelBackward 
+    GyroPitchUp GyroPitchDown GyroRollLeft GyroRollBackward GyroYawLeft GyroYawRight
+    SwingForward SwingBackward
+    NunchukStickUp NunchukStickDown NunchukStickLeft NunchukStickRight   
+    NunchukShakeX NunchukShakeY NunchukShakeZ 
+    NunchukC NunchukZ 
+    X Y Z Start L R  
+
+Wiimote axes:
+    IR MAIN C
+````
+
+## Dolphin pipe control usage
+Only a few emulator operations are currently implemented.
+To perform an emulator operation, write a line `[command]` into the FIFO `emu_in`. 
+Once completed, `[command] [retval]` will be written to `emu_out`. 
+If parsing `command` failed, `retval` will be `-1`. 
+If parsing `command` succeeded and not otherwise specified, `retval` will be `0`
+Otherwise `retval` will be hexidecimal characters.
+
+Warning: there's no safety checks for the following CPU and Memory read/writes. 
+If you do a bad one it will segfault Dolphin.
+
+`command` is one of the following:
+
+ - `UpdateInput`: Force Dolphin to poll inputs (e.g. if you recently wrote something to `wiimote_in`)
+ - `Pause`, `Resume`
+ - `IsPaused`: Print 0 if running, 1 otherwise
+ - `FrameAdvance`: Advance the emulator by 1 frame. (should be run while paused)
+ - `LoadSlot [1-10]`: Load the specified save state in Dolphin Emulator. These are in `user/StateSaves/` as ` RHAE01.s01, RHAE01.s02, RHAE01.s03, ...`
+ - `ReadMemory [memtype] [address]`: Read the specified byte in memory. 
+  The output is 1 byte, written to `emu_out` as 2 hexidecimal characters.
+  `[address]` is an 8-character hexidecimal address.
+  `[memtype]` is one of: 
+    - `eff`
+    - `aux`
+    - `phy`
+    - `mem1`
+    - `mem2`
+    - `fake`
+ - `WriteMemory [memtype] [address] [hexval]`: Write a byte to a memory address. 
+  `[hexval]` is the 2 hexidecimal characters to be written. 
+ - `ToggleBreakpoint [address]`: Toggle a Memcheck type breakpoint. 
+  `[address]` is an 8-character hexidecimal memory address. 
+  When reached the emulator will pause.
+ - `IsBreakpoint [address]`: Prints `0` to `emu_out` if a memory breakpoint is active at that address.
+  `[address]` is an 8-character hexidecimal memory address. 
+ - `ReadCPUFReg [idx] [slot]`: Reads the value in a CPU float register
+    `[idx]` is which float register to read (0-31).
+    `[slot]` is which slot to read (0 or 1).
+    Output is 8 hexadecimal characters.
+ - `WriteCPUFReg [idx] [slot] [val]`: Writes to a CPU float register
+   `[idx]` is which float register to read (0-31).
+   `[slot]` is which slot to read (0 or 1).
+   `[val]` is 8 hexadecimal characters.
+
+## Wii Play Billiards usage
+Some Python3 scripts for interfacing Wii Play Billiards are in `Scripts/`
+`WiiPlayBilliards.py` provides a rudimentary Python interface for systematically performing breaks.
+It assumes that Dolphin has some special save slots. 
+You will have to make these save states yourself, as distributing them could be considered piracy:
+
+ - Slot 2 (`user/StateSaves/RHAE01.s02`): If Wii Play Billiards is paused, loading this state should set the game to right before Billiards performs its first RNG read.
+ - Slot 3 (`user/StateSaves/RHAE01.s03`): Loading this state should set the game to a state where it's ready to take controller input for the break shot.
+
+An example of using `WiiPlayBilliards.py` is given in `Scripts/search.py`:
+Once the game is running in Dolphin, from `Scripts/` try running `python3 ./search.py`.
+
+Dolphin readme below.
+
+---
+
 # Dolphin - A GameCube and Wii Emulator
 
 [Homepage](https://dolphin-emu.org/) | [Project Site](https://github.com/dolphin-emu/dolphin) | [Buildbot](https://dolphin.ci/) | [Forums](https://forums.dolphin-emu.org/) | [Wiki](https://wiki.dolphin-emu.org/) | [GitHub Wiki](https://github.com/dolphin-emu/dolphin/wiki) | [Issue Tracker](https://bugs.dolphin-emu.org/projects/emulator/issues) | [Coding Style](https://github.com/dolphin-emu/dolphin/blob/master/Contributing.md) | [Transifex Page](https://app.transifex.com/delroth/dolphin-emu/dashboard/)
